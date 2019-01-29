@@ -6,7 +6,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #SingleInstance Ignore
 FileEncoding, UTF-8-Raw
 
-ver = v1.2
+ver = v1.3
 ProgName = Touhou Patcher Installer Static Simulator %ver%
 
 Gui, Add, Text, w200, This utility generates a copy of thcrap inside of Touhou games to make it work similarly to the old english patches.
@@ -23,7 +23,9 @@ ExitApp
 
 Yes:
 Gui, Submit
-FileSelectFolder, ThcrapFolder,, 2, Select thcrap folder.
+;FileSelectFolder, ThcrapFolder,, 2, Select the Thcrap folder.
+MsgBox,, %ProgName%, Select the ThCrap folder.
+ThcrapFolder := SelectFolder(2,"Select the Thcrap folder.")
 If ThcrapFolder =
     {
 ;	MsgBox,, %ProgName%, Cancel
@@ -31,7 +33,7 @@ If ThcrapFolder =
 	}
 IfNotExist %ThcrapFolder%\thcrap_loader.exe
     {
-    MsgBox,, %ProgName%, thcrap_loader.exe not found.`nAre you sure thcrap is in this folder?.`nExiting now.
+    MsgBox,, %ProgName%, "thcrap_loader.exe" not found.`nAre you sure Thcrap is in this folder?.`nExiting now.
     ExitApp
     }
 ;FileSelectFolder, GameFolder,, 0,  Select Touhou game folder.
@@ -78,7 +80,7 @@ ThcrapGameFolder := GameFolder "\thcrap"
 
 If GameFolder =
     {
-    MsgBox,, %ProgName%, A terrible error ocurred.`nExiting now.
+    MsgBox,, %ProgName%, A terrible error occurred.`nExiting now.
     ExitApp
     }
 If (! FileExist(GameFolder))
@@ -95,7 +97,7 @@ If (! FileExist(GameFolder))
 ;        }
 If ThExe = 
     {
-    MsgBox,, %ProgName%, Touhou game executable not found.`nAre you sure this is a Touhou game folder?`nExiting now.
+    MsgBox,, %ProgName%, Touhou game executable not found.`nConfigure Thcrap properly before using this program.`nExiting now.
     ExitApp
     }
 
@@ -109,11 +111,11 @@ Loop, Files, %ThcrapFolder%\*.js
     }
 If ThcrapListLang =
     {
-    MsgBox,, %ProgName%, Thcrap configuration files not found.`nAre you sure you ran thcrap?.`nExiting now.
+    MsgBox,, %ProgName%, Thcrap configuration files not found.`nAre you sure you configured Thcrap properly?.`nExiting now.
     ExitApp
     }
 
-Gui, 2:Add, Text, w155, Select a thcrap configuration file:
+Gui, 2:Add, Text, w155, Select a Thcrap configuration file:
 Gui, 2:Add, DropDownList, w155 vThcrapLang Choose1, %ThcrapListLang%
 Gui, 2:Add, Button, w72 gLangSelect Default, Select
 Gui, 2:Show
@@ -140,7 +142,7 @@ If ThcrapFolder = %GameFolder%
     }
 Else If FileExist(ThcrapGameFolder "\thcrap_loader.exe") || FileExist(ThcrapGameFolder "\nmlgc") || FileExist(ThcrapGameFolder "\thpatch")
     {
-    MsgBox, 4, %ProgName%, There is already a copy of thcrap files in this folder.`nOverwrite?
+    MsgBox, 4, %ProgName%, There is already a copy of Thcrap files in this folder.`nOverwrite?
     IfMsgBox Yes
         {
         FileRemoveDir, %ThcrapGameFolder%, 1
@@ -355,11 +357,11 @@ IfMsgBox Yes
 Else
     UserIcon =
 
-MsgBox, 4, %ProgName%, Disable automatic thcrap updates? (NOT RECOMMENDED)
+MsgBox, 4, %ProgName%, Disable automatic Thcrap updates? (NOT RECOMMENDED)
 IfMsgBox No
     FileCopy, %ThcrapFolder%\thcrap_update.dll, %ThcrapGameFolder%thcrap_update.dll
 Else
-    MsgBox,, %ProgName%, If you want to enable updates just copy`n"thcrap_update.dll" from the thcrap folder to:`n"%ThcrapGameFolder%"
+    MsgBox,, %ProgName%, If you want to enable updates just copy`n"thcrap_update.dll" from the Thcrap folder to:`n"%ThcrapGameFolder%"
 
 SplitPath, ThExe,,,,Th
 StringLeft, ThSuffix, ThcrapLang, 1
@@ -615,6 +617,41 @@ GetIconGroupNameByIndex(FilePath, Index, NamePtr := "", Param := "") {
    If (Loaded)
       DllCall("FreeLibrary", "Ptr", Loaded)
    Return GroupName
+}
+
+;Vista style folder picker
+SelectFolder(FSFOptions,FSFText) {
+   ; Common Item Dialog -> msdn.microsoft.com/en-us/library/bb776913%28v=vs.85%29.aspx
+   ; IFileDialog        -> msdn.microsoft.com/en-us/library/bb775966%28v=vs.85%29.aspx
+   ; IShellItem         -> msdn.microsoft.com/en-us/library/bb761140%28v=vs.85%29.aspx
+   Static OsVersion := DllCall("GetVersion", "UChar")
+   Static Show := A_PtrSize * 3
+   Static SetOptions := A_PtrSize * 9
+   Static GetResult := A_PtrSize * 20
+   SelectedFolder := ""
+   If (OsVersion < 6) { ; IFileDialog requires Win Vista+
+      FileSelectFolder, SelectedFolder,, %FSFOptions%, %FSFText%
+      Return SelectedFolder
+   }
+   If !(FileDialog := ComObjCreate("{DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7}", "{42f85136-db7e-439c-85f1-e4075d135fc8}"))
+      Return ""
+   VTBL := NumGet(FileDialog + 0, "UPtr")
+   DllCall(NumGet(VTBL + SetOptions, "UPtr"), "Ptr", FileDialog, "UInt", 0x00000028, "UInt") ; FOS_NOCHANGEDIR | FOS_PICKFOLDERS
+   
+   If !DllCall(NumGet(VTBL + Show, "UPtr"), "Ptr", FileDialog, "Ptr", 0, "UInt") {
+      If !DllCall(NumGet(VTBL + GetResult, "UPtr"), "Ptr", FileDialog, "PtrP", ShellItem, "UInt") {
+         GetDisplayName := NumGet(NumGet(ShellItem + 0, "UPtr"), A_PtrSize * 5, "UPtr")
+         If !DllCall(GetDisplayName, "Ptr", ShellItem, "UInt", 0x80028000, "PtrP", StrPtr) ; SIGDN_DESKTOPABSOLUTEPARSING
+            SelectedFolder := StrGet(StrPtr, "UTF-16"), DllCall("Ole32.dll\CoTaskMemFree", "Ptr", StrPtr)
+         ObjRelease(ShellItem)
+	
+      }
+   }
+   if (FileDialogCustomize)
+		ObjRelease(FileDialogCustomize)
+
+   ObjRelease(FileDialog)
+   Return SelectedFolder
 }
 
 ;Copy function code
