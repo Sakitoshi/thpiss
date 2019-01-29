@@ -4,6 +4,7 @@ SendMode Input  ; Recommended for new scripts due to its superior speed and reli
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #NoTrayIcon
 #SingleInstance Ignore
+FileEncoding, UTF-8-Raw
 
 ver = v1.1
 ProgName = Touhou Patcher Installer Static Simulator %ver%
@@ -22,7 +23,7 @@ ExitApp
 
 Yes:
 Gui, Submit
-FileSelectFolder, ThcrapFolder,, 0, Select thcrap folder.
+FileSelectFolder, ThcrapFolder,, 2, Select thcrap folder.
 If ThcrapFolder =
     {
 ;	MsgBox,, %ProgName%, Cancel
@@ -46,8 +47,9 @@ Loop, Read, %ThcrapFolder%\games.js
                 {
                 GameNumber += 1
                 FixField := StrReplace(A_LoopField,"/","\")
-                SplitPath, FixField,, GamePath
-                Game%GameNumber% = %GamePath%
+                SplitPath, FixField, GameExe, GamePath
+                Game%GameNumber% := GamePath
+                GameExe%GameNumber% := GameExe
                 }
         }
     }
@@ -71,6 +73,7 @@ GuiControlGet, ThGame, 3:, ThGame
 GuiControl, 3:Choose, ThGameName, %ThGame%
 Gui, 3:Submit
 GameFolder := Game%ThGame%
+ThExe := GameExe%ThGame%
 ThcrapGameFolder := GameFolder "\thcrap"
 
 If GameFolder =
@@ -78,18 +81,18 @@ If GameFolder =
     MsgBox,, %ProgName%, A terrible error ocurred.`nExiting now.
     ExitApp
     }
-IfNotExist %GameFolder%
+If (! FileExist(GameFolder))
     {
     MsgBox,, %ProgName%, The Touhou game folder doesn't exist.`nMake sure to run Thcrap before using this tool`nExiting now.
     ExitApp
     }
-ThExe =
-Loop, Files, %GameFolder%\*.exe
-    If (A_LoopFileName ~= "th\w\w.exe") || (A_LoopFileName ~= "th\w\w\w.exe") || (A_LoopFileName = "alcostg.exe")
-        {
-        ThExe = %A_LoopFileName%
-        Break
-        }
+;ThExe =
+;Loop, Files, %GameFolder%\*.exe
+;    If (A_LoopFileName ~= "th\w\w.exe") || (A_LoopFileName ~= "th\w\w\w.exe") || (A_LoopFileName = "alcostg.exe")
+;        {
+;        ThExe = %A_LoopFileName%
+;        Break
+;        }
 If ThExe = 
     {
     MsgBox,, %ProgName%, Touhou game executable not found.`nAre you sure this is a Touhou game folder?`nExiting now.
@@ -403,7 +406,7 @@ ScriptBody =
 #SingleInstance
 SetWorkingDir `%A_ScriptDir`%
 If FileExist("thcrap\thcrap_loader.exe") && FileExist("thcrap\%ThcrapLang%") && FileExist("%ThNumber%.exe")
-Run, %comspec% /c "cd thcrap & thcrap_loader.exe "%ThcrapLang%" "..\%ThNumber%.exe"",, Hide UseErrorLevel
+Run, `%comspec`% /c "cd thcrap & thcrap_loader.exe "%ThcrapLang%" "..\%ThNumber%.exe"",, Hide UseErrorLevel
 Else MsgBox, Check that "thcrap\thcrap_loader.exe"`, "thcrap\%ThcrapLang%" and "%ThNumber%.exe" exist within this folder.
 ExitApp
 )
