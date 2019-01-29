@@ -77,6 +77,7 @@ Gui, 3:Submit
 GameFolder := Game%ThGame%
 ThExe := GameExe%ThGame%
 ThcrapGameFolder := GameFolder "\thcrap"
+ThAltExe =
 
 If GameFolder =
     {
@@ -89,12 +90,15 @@ If (! FileExist(GameFolder))
     ExitApp
     }
 ;ThExe =
-;Loop, Files, %GameFolder%\*.exe
-;    If (A_LoopFileName ~= "th\w\w.exe") || (A_LoopFileName ~= "th\w\w\w.exe") || (A_LoopFileName = "alcostg.exe")
-;        {
-;        ThExe = %A_LoopFileName%
-;        Break
-;        }
+If FileExist(GameFolder "\vpatch.exe")
+    {
+    MsgBox, 4, %ProgName%, "vpatch.exe" found.`nUse it?
+    IfMsgBox Yes
+        {
+        ThAltExe := ThExe
+        ThExe := "vpatch.exe"
+        }
+    }
 If ThExe = 
     {
     MsgBox,, %ProgName%, Touhou game executable not found.`nConfigure Thcrap properly before using this program.`nExiting now.
@@ -363,13 +367,17 @@ IfMsgBox No
 Else
     MsgBox,, %ProgName%, If you want to enable updates just copy`n"thcrap_update.dll" from the Thcrap folder to:`n"%ThcrapGameFolder%"
 
-SplitPath, ThExe,,,,Th
+If ThAltExe !=
+    SplitPath, ThAltExe,,,,Th
+Else
+    SplitPath, ThExe,,,,Th
 StringLeft, ThSuffix, ThcrapLang, 1
 The = %GameFolder%%Th%%ThSuffix%.exe
 FileInstall, thXXe.bin, %The%, 1
 FileCopy, %The%, %GameFolder%custom_%ThSuffix%.exe, 1
 
-BundleAhkScript(The, Th, UserIcon, ThcrapLang, GameFolder)
+
+BundleAhkScript(The, ThExe, UserIcon, ThcrapLang, GameFolder)
 BundleAhkScript(GameFolder "custom_" ThSuffix ".exe", "custom", GameFolder "custom.exe", ThcrapLang)
 
 MsgBox,, %ProgName%, All done :)`n`n"%Th%%ThSuffix%.exe" and "custom_%ThSuffix%.exe" created.
@@ -379,7 +387,7 @@ copyGuiClose:
 Return
 
 ;Build function
-BundleAhkScript(ExeFile, ThNumber, IcoFile="", ThcrapLang="", ThFolder="")
+BundleAhkScript(ExeFile, ThExe, IcoFile="", ThcrapLang="", ThFolder="")
 {
 IfInString, IcoFile, .exe
     {
@@ -393,7 +401,7 @@ Else IfInString, IcoFile, .ico
 	}
 Else If IcoFile =
     {
-    IcoFile = %ThFolder%%ThNumber%.exe
+    IcoFile = %ThFolder%%ThExe%
 	GoSub, ExtractIconRes
 	IcoTemp = temp.ico
     }
@@ -407,9 +415,9 @@ ScriptBody =
 #NoTrayIcon
 #SingleInstance
 SetWorkingDir `%A_ScriptDir`%
-If FileExist("thcrap\thcrap_loader.exe") && FileExist("thcrap\%ThcrapLang%") && FileExist("%ThNumber%.exe")
-Run, `%comspec`% /c "cd thcrap & thcrap_loader.exe "%ThcrapLang%" "..\%ThNumber%.exe"",, Hide UseErrorLevel
-Else MsgBox, Check that "thcrap\thcrap_loader.exe"`, "thcrap\%ThcrapLang%" and "%ThNumber%.exe" exist within this folder.
+If FileExist("thcrap\thcrap_loader.exe") && FileExist("thcrap\%ThcrapLang%") && FileExist("%ThExe%")
+Run, `%comspec`% /c "cd thcrap & thcrap_loader.exe "%ThcrapLang%" "..\%ThExe%"",, Hide UseErrorLevel
+Else MsgBox, Check that "thcrap\thcrap_loader.exe"`, "thcrap\%ThcrapLang%" and "%ThExe%" exist within this folder.
 ExitApp
 )
 
