@@ -6,7 +6,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #SingleInstance Ignore
 FileEncoding, UTF-8-Raw
 
-ver = v1.1
+ver = v1.2
 ProgName = Touhou Patcher Installer Static Simulator %ver%
 
 Gui, Add, Text, w200, This utility generates a copy of thcrap inside of Touhou games to make it work similarly to the old english patches.
