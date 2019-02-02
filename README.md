@@ -14,6 +14,11 @@ This is a tool made to try and mimic the old english patches by creating a reduc
 2. Run this tool and follow the instructions.
 3. Enjoy your touhou games in any folder.
 
+## To-Do ##
+* ~~Create proper GUI.~~
+* Select multiple games to apply configurations to.
+* Select multiple configurations to apply.
+
 ## Antivirus Issues ##
 I've seen various antivirus programs block the tool and/or the executables it creates, this is because some of them really don't like compiled autohotkey scripts and even less if they are compressed with mpress.
 If your antivirus program of choice has no problem with compiled ahk scripts as long as are not compressed with mpress, then you can remove "mpress.exe" from the tool folder to avoid compressing the executables.
