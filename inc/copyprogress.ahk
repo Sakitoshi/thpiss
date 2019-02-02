@@ -15,6 +15,12 @@ If fread_size > 1000000000
     fread_chunk_size := Floor(fread_size / 1000)
     fread_chunk_size_last := ((fread_size / 1000) - fread_chunk_size) * 1000
     }
+Else If fread_size < 1000000
+    {
+    chunk_num := 21
+    fread_chunk_size := Floor(fread_size / 20)
+    fread_chunk_size_last := ((fread_size / 20) - fread_chunk_size) * 20
+    }
 Else
     {
     chunk_num := 101
@@ -48,6 +54,11 @@ Loop, %chunk_num%
         }
     If chunk_num = 1001
         {
+        If A_Index = 1001
+            {
+            GuiControl, %guiname%, %copyprogress%, +1
+            copypercentage += 1
+            }
         each10 := SubStr(A_Index,0,1)
         If (each10 = 0 or A_Index = chunk_num)
             {
@@ -59,8 +70,27 @@ Loop, %chunk_num%
                 }
             }
         }
+    Else If chunk_num = 21
+        {
+        If A_Index = 21
+            {
+            GuiControl, %guiname%, %copyprogress%, +5
+            copypercentage += 5
+            }
+        GuiControl, %guiname%, %copyprogress%, +5
+        If copytext !=
+            {
+            copypercentage += 5
+            GuiControl, %guiname%, %copytext%, Copying %fileinname% - %copypercentage%`%
+            }
+        }
     Else
         {
+        If A_Index = 101
+            {
+            GuiControl, %guiname%, %copyprogress%, +1
+            copypercentage += 1
+            }
         GuiControl, %guiname%, %copyprogress%, +1
         If copytext !=
             {
