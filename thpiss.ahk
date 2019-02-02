@@ -5,8 +5,9 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #NoTrayIcon
 #SingleInstance, Off
 FileEncoding, UTF-8-Raw
+ListLines, Off
 
-ver = v2.0
+ver = v2.0.1
 ProgName = Touhou Patcher Installer Static Simulator
 Title = %ProgName% %ver%
 
@@ -70,7 +71,7 @@ Gui, Main:Add, Button, xm y+10 vOkButton gOkButton Default, Start
 Gui, Main:Add, Button, xp yp vCancelButton gCancelButton, Cancel
 GuiControl, Main:Hide, CancelButton
 GuiControl, Main:Focus, OkButton
-
+Gui, Main:+hWndMainGuihWnd
 Gui, Main:Show,, %ProgName% 
 Return
 
@@ -91,11 +92,7 @@ Return
 
 SelectThcrapFolder:
 Gui, Main:+OwnDialogs
-Gui, Main:+Disabled
-ThcrapFolder := SelectFolder(2,"Select the Thcrap folder.")
-Gui, Main:-Disabled
-Gui, Main:+LastFound
-WinActivate
+ThcrapFolder := SelectFolder(2,"Select the Thcrap folder",MainGuihWnd)
 If ThcrapFolder =
     Return
 Else
@@ -733,13 +730,14 @@ GetIconGroupNameByIndex(FilePath, Index, NamePtr := "", Param := "") {
 }
 
 ;Vista style folder picker
-SelectFolder(FSFOptions,FSFText) {
+SelectFolder(FSFOptions,FSFText="",hWndOwner="0") {
    ; Common Item Dialog -> msdn.microsoft.com/en-us/library/bb776913%28v=vs.85%29.aspx
    ; IFileDialog        -> msdn.microsoft.com/en-us/library/bb775966%28v=vs.85%29.aspx
    ; IShellItem         -> msdn.microsoft.com/en-us/library/bb761140%28v=vs.85%29.aspx
    Static OsVersion := DllCall("GetVersion", "UChar")
    Static Show := A_PtrSize * 3
    Static SetOptions := A_PtrSize * 9
+   Static SetTitle := A_PtrSize * 17
    Static GetResult := A_PtrSize * 20
    SelectedFolder := ""
    If (OsVersion < 6) { ; IFileDialog requires Win Vista+
@@ -750,16 +748,17 @@ SelectFolder(FSFOptions,FSFText) {
       Return ""
    VTBL := NumGet(FileDialog + 0, "UPtr")
    DllCall(NumGet(VTBL + SetOptions, "UPtr"), "Ptr", FileDialog, "UInt", 0x00000028, "UInt") ; FOS_NOCHANGEDIR | FOS_PICKFOLDERS
-   
-   If !DllCall(NumGet(VTBL + Show, "UPtr"), "Ptr", FileDialog, "Ptr", 0, "UInt") {
+   If (FSFText != "")
+      DllCall(NumGet(VTBL + SetTitle, "UPtr"), "Ptr", FileDialog, "Str", FSFText, "UInt")
+   If !DllCall(NumGet(VTBL + Show, "UPtr"), "Ptr", FileDialog, "Ptr", hWndOwner, "UInt") {
       If !DllCall(NumGet(VTBL + GetResult, "UPtr"), "Ptr", FileDialog, "PtrP", ShellItem, "UInt") {
          GetDisplayName := NumGet(NumGet(ShellItem + 0, "UPtr"), A_PtrSize * 5, "UPtr")
          If !DllCall(GetDisplayName, "Ptr", ShellItem, "UInt", 0x80028000, "PtrP", StrPtr) ; SIGDN_DESKTOPABSOLUTEPARSING
             SelectedFolder := StrGet(StrPtr, "UTF-16"), DllCall("Ole32.dll\CoTaskMemFree", "Ptr", StrPtr)
          ObjRelease(ShellItem)
-    
       }
    }
+   ObjRelease(FileDialog)
    Return SelectedFolder
 }
 
