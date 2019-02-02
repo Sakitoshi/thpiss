@@ -108,17 +108,25 @@ Loop, Read, %ThcrapFolder%\games.js
     Loop, Parse, A_LoopReadLine, ""
         {
         If A_Index = 2
-            If A_LoopField not contains _custom,custom.exe
-                ThcrapListGamesName .= A_LoopField . "|"
+            {
+            If A_LoopField not contains _custom
+                ThcrapListGamesName .= A_LoopField "|"
+            If A_LoopField contains _custom
+                ThGameName := StrReplace(A_LoopField,"_custom")
+            }
         If A_Index = 4
-            If A_LoopField not contains _custom,custom.exe
+            {
+            FixField := StrReplace(A_LoopField,"/","\")
+            SplitPath, FixField, GameExe, GamePath
+            If A_LoopField not contains custom.exe
                 {
                 GameNumber += 1
-                FixField := StrReplace(A_LoopField,"/","\")
-                SplitPath, FixField, GameExe, GamePath
                 Game%GameNumber% := GamePath
                 GameExe%GameNumber% := GameExe
                 }
+            If A_LoopField contains custom.exe
+                GameCustomExe%ThGameName% := GameExe
+            }
         }
     }
 If ThcrapListGamesName =
@@ -438,19 +446,23 @@ If ExeName2 = 1
     SplitPath, ThcrapLang,,,, ThSuffixCustom
     ThSuffix := "_" ThSuffixCustom
     }
-
+SplitPath, GameCustomExe%ThGameName%,,,,CustomExe
 The := GameFolder Th ThSuffix ".exe"
+ThCustom := GameFolder CustomExe "_" ThSuffixCustom ".exe"
 If CancelAll = 1
     Goto, EnableGui
 FileInstall, thXXe.bin, %The%, 1
-FileCopy, %The%, %GameFolder%custom_%ThSuffixCustom%.exe, 1
+If FileExist(GameFolder GameCustomExe%ThGameName%)
+    {
+    FileCopy, %The%, %GameFolder%custom_%ThSuffixCustom%.exe, 1
+    BundleAhkScript(ThCustom, GameCustomExe%ThGameName%, GameFolder GameCustomExe%ThGameName%, ThcrapLang)
+    }
 BundleAhkScript(The, ThExe, UserIcon, ThcrapLang, GameFolder)
-BundleAhkScript(GameFolder "custom_" ThSuffixCustom ".exe", "custom.exe", GameFolder "custom.exe", ThcrapLang)
 
 If DisableUpdates = 1
     MsgBox,, %ProgName%, All done :)`n`n"%Th%%ThSuffix%.exe" and "custom_%ThSuffixCustom%.exe" created.`n`nIf you want to enable updates just copy`n"thcrap_update.dll" from the Thcrap folder to:`n"%ThcrapGameFolder%"
 Else
-    MsgBox,, %ProgName%, All done :)`n`n"%Th%%ThSuffix%.exe" and "custom_%ThSuffixCustom%.exe" created.
+    MsgBox,, %ProgName%, All done :)`n`n"%Th%%ThSuffix%.exe" and "%CustomExe%_%ThSuffixCustom%.exe" created.
 Goto, EnableGui
 Return
 
