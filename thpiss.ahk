@@ -457,7 +457,7 @@ If CancelAll = 1
     Goto, EnableGui
 FileInstall, thXXe.bin, %The%, 1
 CustomExists := FileExist(GameFolder GameCustomExe%ThGameName%)
-If CustomExists = A
+If (GameCustomExe%ThGameName% != "" && CustomExists = "A")
     {
     FileCopy, %The%, %GameFolder%custom_%ThSuffixCustom%.exe, 1
     BundleAhkScript(ThCustom, GameCustomExe%ThGameName%, GameFolder GameCustomExe%ThGameName%, ThcrapLang)
