@@ -456,17 +456,21 @@ ThCustom := GameFolder CustomExe "_" ThSuffixCustom ".exe"
 If CancelAll = 1
     Goto, EnableGui
 FileInstall, thXXe.bin, %The%, 1
-If FileExist(GameFolder GameCustomExe%ThGameName%)
+CustomExists := FileExist(GameFolder GameCustomExe%ThGameName%)
+If CustomExists = A
     {
     FileCopy, %The%, %GameFolder%custom_%ThSuffixCustom%.exe, 1
     BundleAhkScript(ThCustom, GameCustomExe%ThGameName%, GameFolder GameCustomExe%ThGameName%, ThcrapLang)
+    CustomCreated := "and """ CustomExe "_" ThSuffixCustom ".exe"""
     }
+Else
+    CustomCreated := " "
 BundleAhkScript(The, ThExe, UserIcon, ThcrapLang, GameFolder)
 
 If DisableUpdates = 1
-    MsgBox,, %ProgName%, All done :)`n`n"%Th%%ThSuffix%.exe" and "custom_%ThSuffixCustom%.exe" created.`n`nIf you want to enable updates just copy`n"thcrap_update.dll" from the Thcrap folder to:`n"%ThcrapGameFolder%"
+    MsgBox,, %ProgName%, All done :)`n`n"%Th%%ThSuffix%.exe"%CustomCreated%created.`n`nIf you want to enable updates just copy`n"thcrap_update.dll" from the Thcrap folder to:`n"%ThcrapGameFolder%"
 Else
-    MsgBox,, %ProgName%, All done :)`n`n"%Th%%ThSuffix%.exe" and "%CustomExe%_%ThSuffixCustom%.exe" created.
+    MsgBox,, %ProgName%, All done :)`n`n"%Th%%ThSuffix%.exe"%CustomCreated%created.
 Goto, EnableGui
 Return
 
