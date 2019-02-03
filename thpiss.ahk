@@ -11,7 +11,7 @@ ListLines, Off
 #Include copyprogress.ahk
 #Include folderpicker.ahk
 
-ver = v2.0.2
+ver = v2.1
 ProgName = Touhou Patcher Installer Static Simulator
 Title = %ProgName% %ver%
 
