@@ -54,7 +54,7 @@ Gui, Main:Add, DropDownList, xp yp vThGameName
 GuiControl, Main:Hide, ThGameName
 
 Gui, Main:Add, Text, xs yp+33 w160 Section, Select a Thcrap configuration file:
-Gui, Main:Add, DropDownList, ys-4 w139 vThcrapLang
+Gui, Main:Add, DropDownList, ys-4 w139 vThcrapLang gThcrapMultiLang
 
 Gui, Main:Add, Checkbox, xs y+16 w107 Section vUserIconCheck, Use custom icon
 Gui, Main:Add, Picture, x+140 ys-9 w32 h32 vUserIcon
@@ -140,8 +140,14 @@ GuiControl, Main:, ThcrapLang, %ThcrapListLang%
 Loop, Files, %ThcrapFolder%\*.js
     {
     If A_LoopFileName not in games.js,config.js
+        {
+        LangNum++
+        ThcrapLang%LangNum% := A_LoopFileName
         ThcrapListLang .= A_LoopFileName "|"
+        }
     }
+If (LangNum > 1 && ThcrapListLang != "|")
+    ThcrapListLang .= "Multiple configs|"
 If ThcrapListLang =
     ThcrapListLang := "|"
 GuiControl, Main:, ThGame, %ThcrapListGamesName%
@@ -161,6 +167,44 @@ If UserIcon !=
     }
 Return
 
+ThcrapMultiLang:
+Gui, Main:+OwnDialogs
+GuiControlGet, ThcrapLang, Main:, ThcrapLang
+If ThcrapLang != Multiple configs
+    {
+    GuiControl, Main:Enable, ExeName1
+    Return
+    }
+Loop, %LangNum%
+    Gui, Multi:Add, Checkbox, w200 vThcrapLang%A_Index%Do, % ThcrapLang%A_Index%
+Gui, Multi:Add, Button, gMultiOk, Ok
+Gui, Multi:+ToolWindow
+Gui, Multi:Show,, Select configs
+Gui, Main:+Disabled
+Return
+
+MultiOk:
+Gui, Multi:Submit, NoHide
+MultiDo = 0
+Loop, %LangNum%
+    {
+    If ThcrapLang%A_Index%Do = 1
+        MultiDo++
+    }
+If MultiDo < 2
+    {
+    MsgBox,, %ProgName%, You have to select at least 2 configs.
+    Return
+    }
+GuiControl, Main:Disable, ExeName1
+GuiControl, Main:, ExeName2, 1
+Gui, Main:-Disabled
+Gui, Multi:Destroy
+Return
+
+MultiGuiClose:
+Return
+
 OkButton:
 Gui, Main:+OwnDialogs
 GuiControlGet, ThGame, Main:, ThGame
@@ -172,8 +216,11 @@ ThcrapGameFolder := GameFolder "\thcrap"
 ThAltExe =
 If (ThcrapFolder = "" || ThGame = "" || ThGameName = "")
     Return
+If ThcrapLang != Multiple configs
+    MultiDo = 1
+If MultiDo = 1
+    ThcrapLang1 := ThcrapLang
 GoSub, DisableGui
-
 If GameFolder =
     {
     MsgBox,, %ProgName%, A terrible error occurred.
@@ -223,180 +270,184 @@ Else If FileExist(ThcrapGameFolder "\thcrap_loader.exe") || FileExist(ThcrapGame
 
 CopyFiles:
 FileCreateDir, %ThcrapGameFolder%
-FileCopy, %ThcrapFolder%\%ThcrapLang%, %ThcrapGameFolder%\%ThcrapLang%
 ;count files to copy
 SkipField =
 ReadNext =
 FixField =
 PatchFolderPrev =
+ThcrapPatchList =
+ThcrapPatchListFix =
 CopyCount = 0
 FileCount = 0
-Loop, Read, %ThcrapGameFolder%\%ThcrapLang%
+
+Loop, %MultiDo%
     {
-    Loop, Parse, A_LoopReadLine, ""
+    Loop, Read, % ThcrapFolder "\" ThcrapLang%A_Index%
         {
-        If CancelAll = 1
-            Goto, EnableGui
-        If A_LoopField = archive
+        Loop, Parse, A_LoopReadLine, ""
             {
-            SkipField = True
-            Continue
-            }
-        If SkipField = True
-            {
-            SkipField = False
-            ReadNext = True
-            Continue
-            }
-        If ReadNext = True
-            {
-            FixField := StrReplace(A_LoopField,"/","\")
-            StringSplit, PatchFolders, A_LoopField, /
-            If PatchFolders1 not in %PatchFolderPrev%
-                If FileExist(ThcrapFolder "\" PatchFolders1 "\repo.js")
-                    FileCount++
-            PatchFolderPrev .= PatchFolders1 ","
-            Loop, Files, %ThcrapFolder%\%FixField%*.*
+            If CancelAll = 1
+                Goto, EnableGui
+            If A_LoopField = archive
                 {
-                If A_LoopFileName in files.js,formats.js,global.js,patch.js,stringdefs.js,themes.js,versions.js
-                    FileCount++
-                If A_LoopFileExt in ttf,otf
-                    FileCount++
-                If A_LoopFileName contains %ThGameName%.
-                    FileCount++
+                SkipField = True
+                Continue
                 }
-            If FileExist(ThcrapFolder "\" FixField ThGameName)
+            If SkipField = True
                 {
-                Loop, Files, %ThcrapFolder%\%FixField%%ThGameName%\*.*, FR
-                    FileCount++
+                SkipField = False
+                ReadNext = True
+                Continue
                 }
-            If FileExist(ThcrapFolder "\" FixField ThGameName "_custom")
+            If ReadNext = True
                 {
-                Loop, Files, %ThcrapFolder%\%FixField%%ThGameName%_custom\*.*, FR
-                    FileCount++
+                If ThcrapPatchList =
+                    ThcrapPatchList := A_LoopField
+                Else
+                    ThcrapPatchList .= "`n" A_LoopField
                 }
+            ReadNext = False
             }
-        ReadNext = False
         }
     }
-FileCount++
+Loop, Parse, ThcrapPatchList, `n
+    {
+    If ThcrapPatchListFix not contains %A_LoopField%
+        {
+        ThcrapPatchListFix .= A_LoopField "`n"
+        FixField := StrReplace(A_LoopField,"/","\")
+        StringSplit, PatchFolders, A_LoopField, /
+        If PatchFolders1 not in %PatchFolderPrev%
+            If FileExist(ThcrapFolder "\" PatchFolders1 "\repo.js")
+                FileCount++
+        PatchFolderPrev .= PatchFolders1 ","
+        Loop, Files, %ThcrapFolder%\%FixField%*.*
+            {
+            If A_LoopFileName in files.js,formats.js,global.js,patch.js,stringdefs.js,themes.js,versions.js
+                FileCount++
+            If A_LoopFileExt in ttf,otf
+                FileCount++
+            If A_LoopFileName contains %ThGameName%.
+                FileCount++
+            }
+        If FileExist(ThcrapFolder "\" FixField ThGameName)
+            {
+            Loop, Files, %ThcrapFolder%\%FixField%%ThGameName%\*.*, FR
+                FileCount++
+            }
+        If FileExist(ThcrapFolder "\" FixField ThGameName "_custom")
+            {
+            Loop, Files, %ThcrapFolder%\%FixField%%ThGameName%_custom\*.*, FR
+                FileCount++
+            }
+        }
+    }
+FileCount += MultiDo ;count the js configs
 Loop, Files, %ThcrapFolder%\*.dll
     {
     If A_LoopFileName != thcrap_update.dll
         FileCount++
     }
+FileCount++ ;count thcrap_loader.exe
 GuiControl, Main:+Range0-%FileCount%, GlobalProgress
+GuiControl, Main:, GlobalProgress, 0
 GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
 ;copy
 SkipField =
 ReadNext =
 FixField =
 PatchFolderPrev =
-Loop, Read, %ThcrapGameFolder%\%ThcrapLang%
+Loop, Parse, ThcrapPatchListFix, `n
     {
-    Loop, Parse, A_LoopReadLine, ""
+    FixField := StrReplace(A_LoopField,"/","\")
+    StringSplit, PatchFolders, A_LoopField, /
+    If PatchFolders1 not in %PatchFolderPrev%
+        If FileExist(ThcrapFolder "\" PatchFolders1 "\repo.js")
+            {
+            If (! FileExist(ThcrapGameFolder "\" PatchFolders1))
+                FileCreateDir, %ThcrapGameFolder%\%PatchFolders1%
+            copygui(ThcrapFolder "\" PatchFolders1 "\repo.js",ThcrapGameFolder "\" PatchFolders1 "\repo.js","SingleProgress","Main","SingleText")
+            CopyCount++
+            GuiControl, Main:, GlobalProgress, +1
+            GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
+            }
+    PatchFolderPrev .= PatchFolders1 ","
+    Loop, Files, %ThcrapFolder%\%FixField%*.*
         {
         If CancelAll = 1
             Goto, EnableGui
-        If A_LoopField = archive
+        If (! FileExist(ThcrapGameFolder "\" FixField))
+            FileCreateDir, %ThcrapGameFolder%\%FixField%
+        If A_LoopFileName in files.js,formats.js,global.js,patch.js,stringdefs.js,themes.js,versions.js
             {
-            SkipField = True
-            Continue
+            copygui(A_LoopFileFullPath,ThcrapGameFolder "\" FixField A_LoopFileName,"SingleProgress","Main","SingleText")
+            CopyCount++
+            GuiControl, Main:, GlobalProgress, +1
+            GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
             }
-        If SkipField = True
+        If A_LoopFileExt in ttf,otf
             {
-            SkipField = False
-            ReadNext = True
-            Continue
+            copygui(A_LoopFileFullPath,ThcrapGameFolder "\" FixField A_LoopFileName,"SingleProgress","Main","SingleText")
+            CopyCount++
+            GuiControl, Main:, GlobalProgress, +1
+            GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
             }
-        If ReadNext = True
+        If A_LoopFileName contains %ThGameName%.
             {
-            FixField := StrReplace(A_LoopField,"/","\")
-            StringSplit, PatchFolders, A_LoopField, /
-            If PatchFolders1 not in %PatchFolderPrev%
-                {
-                If (! FileExist(ThcrapGameFolder "\" PatchFolders1))
-                    FileCreateDir, %ThcrapGameFolder%\%PatchFolders1%
-                If FileExist(ThcrapFolder "\" PatchFolders1 "\repo.js")
-                    {
-                    copygui(ThcrapFolder "\" PatchFolders1 "\repo.js",ThcrapGameFolder "\" PatchFolders1 "\repo.js","SingleProgress","Main","SingleText")
-                    CopyCount++
-                    GuiControl, Main:, GlobalProgress, +1
-                    GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
-                    }
-                }
-            PatchFolderPrev .= PatchFolders1 ","
-            Loop, Files, %ThcrapFolder%\%FixField%*.*
-                {
-                If CancelAll = 1
-                    Goto, EnableGui
-                If (! FileExist(ThcrapGameFolder "\" FixField))
-                    FileCreateDir, %ThcrapGameFolder%\%FixField%
-                If A_LoopFileName in files.js,formats.js,global.js,patch.js,stringdefs.js,themes.js,versions.js
-                    {
-                    copygui(A_LoopFileFullPath,ThcrapGameFolder "\" FixField A_LoopFileName,"SingleProgress","Main","SingleText")
-                    CopyCount++
-                    GuiControl, Main:, GlobalProgress, +1
-                    GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
-                    }
-                If A_LoopFileExt in ttf,otf
-                    {
-                    copygui(A_LoopFileFullPath,ThcrapGameFolder "\" FixField A_LoopFileName,"SingleProgress","Main","SingleText")
-                    CopyCount++
-                    GuiControl, Main:, GlobalProgress, +1
-                    GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
-                    }
-                If A_LoopFileName contains %ThGameName%.
-                    {
-                    copygui(A_LoopFileFullPath,ThcrapGameFolder "\" FixField A_LoopFileName,"SingleProgress","Main","SingleText")
-                    CopyCount++
-                    GuiControl, Main:, GlobalProgress, +1
-                    GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
-                    }
-                }
-            If FileExist(ThcrapFolder "\" FixField ThGameName)
-                {
-                Loop, Files, %ThcrapFolder%\%FixField%%ThGameName%\*.*, FR
-                    {
-                    If CancelAll = 1
-                        Goto, EnableGui
-                    SplitPath, A_LoopFileFullPath,, SubField
-                    FPos := InStr(A_LoopFileFullPath,FixField) + StrLen(FixField) + StrLen(ThGameName)
-                    StringTrimLeft, SubField, SubField, % FPos
-                    SubField := "\" SubField "\"
-                    If SubField = \\
-                        SubField := "\"
-                    If (! FileExist(ThcrapGameFolder "\" FixField ThGameName SubField))
-                        FileCreateDir, %ThcrapGameFolder%\%FixField%%ThGameName%%SubField%
-                    copygui(A_LoopFileFullPath,ThcrapGameFolder "\" FixField ThGameName SubField A_LoopFileName,"SingleProgress","Main","SingleText")
-                    CopyCount++
-                    GuiControl, Main:, GlobalProgress, +1
-                    GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
-                    }
-                }
-            If FileExist(ThcrapFolder "\" FixField ThGameName "_custom")
-                {
-                Loop, Files, %ThcrapFolder%\%FixField%%ThGameName%_custom\*.*, FR
-                    {
-                    If CancelAll = 1
-                        Goto, EnableGui
-                    SplitPath, A_LoopFileFullPath,, SubField
-                    FPos := InStr(A_LoopFileFullPath,FixField) + StrLen(FixField) + StrLen(ThGameName "_custom")
-                    StringTrimLeft, SubField, SubField, % FPos
-                    SubField := "\" SubField "\"
-                    If SubField = \\
-                        SubField := "\"
-                    If (! FileExist(ThcrapGameFolder "\" FixField ThGameName "_custom" SubField))
-                        FileCreateDir, %ThcrapGameFolder%\%FixField%%ThGameName%_custom%SubField%
-                    copygui(A_LoopFileFullPath,ThcrapGameFolder "\" FixField ThGameName "_custom" SubField A_LoopFileName,"SingleProgress","Main","SingleText")
-                    CopyCount++
-                    GuiControl, Main:, GlobalProgress, +1
-                    GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
-                    }
-                }
+            copygui(A_LoopFileFullPath,ThcrapGameFolder "\" FixField A_LoopFileName,"SingleProgress","Main","SingleText")
+            CopyCount++
+            GuiControl, Main:, GlobalProgress, +1
+            GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
             }
-        ReadNext = False
         }
+    If FileExist(ThcrapFolder "\" FixField ThGameName)
+        {
+        Loop, Files, %ThcrapFolder%\%FixField%%ThGameName%\*.*, FR
+            {
+            If CancelAll = 1
+                Goto, EnableGui
+            SplitPath, A_LoopFileFullPath,, SubField
+            FPos := InStr(A_LoopFileFullPath,FixField) + StrLen(FixField) + StrLen(ThGameName)
+            StringTrimLeft, SubField, SubField, % FPos
+            SubField := "\" SubField "\"
+            If SubField = \\
+                SubField := "\"
+            If (! FileExist(ThcrapGameFolder "\" FixField ThGameName SubField))
+                FileCreateDir, %ThcrapGameFolder%\%FixField%%ThGameName%%SubField%
+            copygui(A_LoopFileFullPath,ThcrapGameFolder "\" FixField ThGameName SubField A_LoopFileName,"SingleProgress","Main","SingleText")
+            CopyCount++
+            GuiControl, Main:, GlobalProgress, +1
+            GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
+            }
+        }
+    If FileExist(ThcrapFolder "\" FixField ThGameName "_custom")
+        {
+        Loop, Files, %ThcrapFolder%\%FixField%%ThGameName%_custom\*.*, FR
+            {
+            If CancelAll = 1
+                Goto, EnableGui
+            SplitPath, A_LoopFileFullPath,, SubField
+            FPos := InStr(A_LoopFileFullPath,FixField) + StrLen(FixField) + StrLen(ThGameName "_custom")
+            StringTrimLeft, SubField, SubField, % FPos
+            SubField := "\" SubField "\"
+            If SubField = \\
+                SubField := "\"
+            If (! FileExist(ThcrapGameFolder "\" FixField ThGameName "_custom" SubField))
+                FileCreateDir, %ThcrapGameFolder%\%FixField%%ThGameName%_custom%SubField%
+            copygui(A_LoopFileFullPath,ThcrapGameFolder "\" FixField ThGameName "_custom" SubField A_LoopFileName,"SingleProgress","Main","SingleText")
+            CopyCount++
+            GuiControl, Main:, GlobalProgress, +1
+            GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
+            }
+        }
+    }
+
+Loop, %MultiDo%
+    {
+    FileCopy, % ThcrapFolder "\" ThcrapLang%A_Index%, % ThcrapGameFolder "\" ThcrapLang%A_Index%
+    CopyCount++
+    GuiControl, Main:, GlobalProgress, +1
+    GuiControl, Main:, GlobalText, %CopyCount%/%FileCount%
     }
 copygui(ThcrapFolder "\thcrap_loader.exe",ThcrapGameFolder "\thcrap_loader.exe","SingleProgress","Main","SingleText")
 CopyCount++
@@ -425,52 +476,76 @@ ThcrapGameFolder .= "\"
 If (! FileExist(UserIcon))
     UserIcon =
 
-;MsgBox, 4, %ProgName%, Disable automatic Thcrap updates? (NOT RECOMMENDED)
 If DisableUpdates = 0
     FileCopy, %ThcrapFolder%\thcrap_update.dll, %ThcrapGameFolder%thcrap_update.dll
 Else If FileExist(ThcrapGameFolder "thcrap_update.dll")
     FileDelete, %ThcrapGameFolder%thcrap_update.dll
 
 GuiControl, Main:, SingleText, Creating exe's
+ThSuffix = temp
+ThSuffixCustom = temp
+The = temp.exe
+ThCustom = ctemp.exe
 If ThAltExe !=
     {
-    SplitPath, ThAltExe,,,,Th
+    SplitPath, ThAltExe,,,, Th
     If UserIcon =
         UserIcon := GameFolder ThAltExe
     }
 Else
-    SplitPath, ThExe,,,,Th
+    SplitPath, ThExe,,,, Th
 If ExeName1 = 1
     {
-    StringLeft, ThSuffix, ThcrapLang, 1
-    ThSuffixCustom := ThSuffix
+    StringLeft, ThSuffix1, ThcrapLang1, 1
+    ThSuffixCustom1 := ThSuffix1
     }
 If ExeName2 = 1
     {
-    SplitPath, ThcrapLang,,,, ThSuffixCustom
-    ThSuffix := "_" ThSuffixCustom
+    Loop, %MultiDo%
+        {
+        SplitPath, ThcrapLang%A_Index%,,,, ThSuffixCustom%A_Index%
+        ThSuffix%A_Index% := "_" ThSuffixCustom%A_Index%
+        }
     }
-SplitPath, GameCustomExe%ThGameName%,,,,CustomExe
+SplitPath, GameCustomExe%ThGameName%,,,, CustomExe
+Loop, %MultiDo%
+    {
+    The%A_Index% := GameFolder Th ThSuffix%A_Index% ".exe"
+    ThCustom%A_Index% := GameFolder CustomExe "_" ThSuffixCustom%A_Index% ".exe"
+    }
 The := GameFolder Th ThSuffix ".exe"
-ThCustom := GameFolder CustomExe "_" ThSuffixCustom ".exe"
 If CancelAll = 1
     Goto, EnableGui
 FileInstall, thXXe.bin, %The%, 1
 CustomExists := FileExist(GameFolder GameCustomExe%ThGameName%)
 If (GameCustomExe%ThGameName% != "" && CustomExists = "A")
     {
-    FileCopy, %The%, %GameFolder%custom_%ThSuffixCustom%.exe, 1
-    BundleAhkScript(ThCustom, GameCustomExe%ThGameName%, GameFolder GameCustomExe%ThGameName%, ThcrapLang)
-    CustomCreated := "and """ CustomExe "_" ThSuffixCustom ".exe"""
+    Loop, %MultiDo%
+        {
+        FileCopy, %The%, % GameFolder "custom_" ThSuffixCustom%A_Index% ".exe", 1
+        BundleAhkScript(ThCustom%A_Index%, GameFolder GameCustomExe%ThGameName%, GameFolder GameCustomExe%ThGameName%, ThcrapLang%A_Index%)
+        }
+    CustomCreated := " and """ CustomExe "_" ThSuffixCustom1 ".exe"" "
     }
 Else
     CustomCreated := " "
-BundleAhkScript(The, ThExe, UserIcon, ThcrapLang, GameFolder)
+
+Loop, %MultiDo%
+    {
+    FileCopy, %The%, % The%A_Index%, 1
+    BundleAhkScript(The%A_Index%, GameFolder ThExe, UserIcon, ThcrapLang%A_Index%)
+    }
+FileDelete, %The%
 
 If DisableUpdates = 1
-    MsgBox,, %ProgName%, All done :)`n`n"%Th%%ThSuffix%.exe"%CustomCreated%created.`n`nIf you want to enable updates just copy`n"thcrap_update.dll" from the Thcrap folder to:`n"%ThcrapGameFolder%"
+    MsgUpdates = `n`nIf you want to enable updates just copy`n"thcrap_update.dll" from the Thcrap folder to:`n"%ThcrapGameFolder%"
 Else
-    MsgBox,, %ProgName%, All done :)`n`n"%Th%%ThSuffix%.exe"%CustomCreated%created.
+    MsgUpdates =
+
+If MultiDo > 1
+    MsgBox,, %ProgName%, All done :)`n`nEverything copied and exe's created.%MsgUpdates%
+Else
+    MsgBox,, %ProgName%, All done :)`n`nEverything copied and "%Th%%ThSuffix1%.exe"%CustomCreated%created.%MsgUpdates%
 Goto, EnableGui
 Return
 
@@ -483,7 +558,8 @@ GuiControl, Main:Enable, UserIconCheck
 GuiControl, Main:Enable, SelectIcon
 GuiControl, Main:Enable, Usevpatch
 GuiControl, Main:Enable, DisableUpdates
-GuiControl, Main:Enable, ExeName1
+If ThcrapLang != Multiple configs
+    GuiControl, Main:Enable, ExeName1
 GuiControl, Main:Enable, ExeName2
 GuiControl, Main:Hide, CancelButton
 GuiControl, Main:Show, OkButton

@@ -1,5 +1,5 @@
 ﻿;Build function
-BundleAhkScript(ExeFile, ThExe, IcoFile="", ThcrapLang="", ThFolder="")
+BundleAhkScript(ExeFile, ThExe, IcoFile="", ThcrapLang="")
 {
 IcoTemp = %A_Temp%\temp.ico
 IfInString, IcoFile, .exe
@@ -7,21 +7,23 @@ IfInString, IcoFile, .exe
 Else IfInString, IcoFile, .ico
     FileCopy, %IcoFile%, %A_Temp%\temp.ico
 Else If IcoFile =
-    IcoFile = %ThFolder%%ThExe%
+    {
+    IcoFile := ThExe
     GoSub, ExtractIconRes
+    }
 
 If ThcrapLang =
     ThcrapLang = en.js
-
+SplitPath, ThExe, ThExeFile
 ScriptBody =
 (
 #NoEnv
 #NoTrayIcon
 #SingleInstance
 SetWorkingDir `%A_ScriptDir`%
-If FileExist("thcrap\thcrap_loader.exe") && FileExist("thcrap\%ThcrapLang%") && FileExist("%ThExe%")
-Run, `%comspec`% /c "cd thcrap & thcrap_loader.exe "%ThcrapLang%" "..\%ThExe%"",, Hide UseErrorLevel
-Else MsgBox, Check that "thcrap\thcrap_loader.exe"`, "thcrap\%ThcrapLang%" and "%ThExe%" exist within this folder.
+If FileExist("thcrap\thcrap_loader.exe") && FileExist("thcrap\%ThcrapLang%") && FileExist("%ThExeFile%")
+Run, `%comspec`% /c "cd thcrap & thcrap_loader.exe "%ThcrapLang%" "..\%ThExeFile%"",, Hide UseErrorLevel
+Else MsgBox, Check that "thcrap\thcrap_loader.exe"`, "thcrap\%ThcrapLang%" and "%ThExeFile%" exist within this folder.
 ExitApp
 )
 
