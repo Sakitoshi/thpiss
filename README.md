@@ -17,7 +17,7 @@ This is a tool made to try and mimic the old english patches by creating a reduc
 ## To-Do ##
 * ~~Create proper GUI.~~
 * Select multiple games to apply configurations to.
-* Select multiple configurations to apply.
+* ~~Select multiple configurations to apply.~~
 
 ## Antivirus Issues ##
 I've seen various antivirus programs block the tool and/or the executables it creates, this is because some of them really don't like compiled autohotkey scripts and even less if they are compressed with mpress.
