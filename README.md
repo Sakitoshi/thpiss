@@ -7,6 +7,7 @@ This is a tool made to try and mimic the old english patches by creating a reduc
 ## Main Features ##
 * The game folder can be moved around without breaking the shortcuts (so you can have them in a pendrive to use on any pc).
 * You can select a custom icon for the new executable.
+* Integration with vpatch.
 
 ## Usage ##
 0. Get Thcrap from [Touhou Patch Center](https://www.thpatch.net/wiki/Touhou_Patch_Center:Download).
@@ -16,7 +17,7 @@ This is a tool made to try and mimic the old english patches by creating a reduc
 
 ## To-Do ##
 * ~~Create proper GUI.~~
-* Select multiple games to apply configurations to.
+* ~~Select multiple games to apply configurations to.~~
 * ~~Select multiple configurations to apply.~~
 
 ## Antivirus Issues ##
