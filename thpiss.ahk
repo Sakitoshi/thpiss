@@ -11,7 +11,7 @@ ListLines, Off
 #Include copyprogress.ahk
 #Include folderpicker.ahk
 
-ver = v2.2
+ver = v2.3
 ProgName = Touhou Patcher Installer Static Simulator
 Title = %ProgName% %ver%
 
@@ -49,12 +49,10 @@ Gui, Main:Add, Edit, ys-3 w200 r1 vThcrapFolder gInputThcrapFolder
 Gui, Main:Add, Button, ys-4 vSelectThcrapFolder gSelectThcrapFolder, ...
 
 Gui, Main:Add, Text, xs yp+33 w160 Section, Select a Touhou game to use:
-Gui, Main:Add, DropDownList, ys-4 w139 vThGame AltSubmit
-Gui, Main:Add, DropDownList, xp yp vThGameName
-GuiControl, Main:Hide, ThGameName
+Gui, Main:Add, DropDownList, ys-4 w139 vThGame gThMultiGame AltSubmit
 
 Gui, Main:Add, Text, xs yp+33 w160 Section, Select a Thcrap configuration file:
-Gui, Main:Add, DropDownList, ys-4 w139 vThcrapLang gThcrapMultiLang
+Gui, Main:Add, DropDownList, ys-4 w139 vThcrapLang gThcrapMultiLang AltSubmit
 
 Gui, Main:Add, Checkbox, xs y+16 w107 Section vUserIconCheck, Use custom icon
 Gui, Main:Add, Picture, x+140 ys-9 w32 h32 vUserIcon
@@ -104,6 +102,8 @@ Else
 Return
 
 InputThcrapFolder:
+GameNumber = 0
+LangNum = 0
 GuiControlGet, ThcrapFolder, Main:, ThcrapFolder
 ThcrapListGamesName := "|"
 GuiControl, Main:, ThGameName, %ThcrapListGamesName%
@@ -114,7 +114,10 @@ Loop, Read, %ThcrapFolder%\games.js
         If A_Index = 2
             {
             If A_LoopField not contains _custom
+                {
+                GameName := A_LoopField
                 ThcrapListGamesName .= A_LoopField "|"
+                }
             If A_LoopField contains _custom
                 ThGameName := StrReplace(A_LoopField,"_custom")
             }
@@ -125,6 +128,7 @@ Loop, Read, %ThcrapFolder%\games.js
             If A_LoopField not contains custom.exe
                 {
                 GameNumber += 1
+                GameName%GameNumber% := GameName
                 Game%GameNumber% := GamePath
                 GameExe%GameNumber% := GameExe
                 }
@@ -133,6 +137,8 @@ Loop, Read, %ThcrapFolder%\games.js
             }
         }
     }
+If (GameNumber > 1 && ThcrapListGamesName != "|")
+    ThcrapListGamesName .= "Multiple games|"
 If ThcrapListGamesName =
     ThcrapListGamesName := "|"
 ThcrapListLang := "|"
@@ -169,10 +175,13 @@ Return
 
 ThcrapMultiLang:
 Gui, Main:+OwnDialogs
-GuiControlGet, ThcrapLang, Main:, ThcrapLang
+MultiDo = 0
+GuiControlGet, ThcrapLang, Main:, ThcrapLang, Text
+GuiControlGet, ThcrapLangNumber, Main:, ThcrapLang
 If ThcrapLang != Multiple configs
     {
     GuiControl, Main:Enable, ExeName1
+    LangChoose := ThcrapLangNumber
     Return
     }
 Loop, %LangNum%
@@ -185,7 +194,6 @@ Return
 
 MultiOk:
 Gui, Multi:Submit, NoHide
-MultiDo = 0
 Loop, %LangNum%
     {
     If ThcrapLang%A_Index%Do = 1
@@ -202,14 +210,84 @@ Gui, Main:-Disabled
 Gui, Multi:Destroy
 Return
 
+ThMultiGame:
+Gui, Main:+OwnDialogs
+MultiGame = 0
+GuiControlGet, ThGame, Main:, ThGame
+GuiControlGet, ThGameName, Main:, ThGame, Text
+If ThGameName != Multiple games
+    {
+    GameChoose := ThGame
+    Return
+    }
+Loop, %GameNumber%
+    Gui, Multi:Add, Checkbox, w200 vThGame%A_Index%Do, % GameName%A_Index%
+Gui, Multi:Add, Button, gGameOk, Ok
+Gui, Multi:+ToolWindow
+Gui, Multi:Show,, Select configs
+Gui, Main:+Disabled
+Return
+
+GameOk:
+Gui, Multi:Submit, NoHide
+Loop, %GameNumber%
+    {
+    If ThGame%A_Index%Do = 1
+        {
+        ThGame%A_Index% := A_Index
+        MultiGame++
+        }
+    }
+If MultiGame < 2
+    {
+    MsgBox,, %ProgName%, You have to select at least 2 games.
+    Return
+    }
+Gui, Main:-Disabled
+Gui, Multi:Destroy
+Return
+
 MultiGuiClose:
+If GameChoose =
+    GameChoose = 1
+If LangChoose =
+    LangChoose = 1
+If MultiGame = 0
+    GuiControl, Main:Choose, ThGame, %GameChoose%
+If MultiDo = 0
+    GuiControl, Main:Choose, ThcrapLang, %LangChoose%
+Gui, Main:-Disabled
+Gui, Multi:Destroy
 Return
 
 OkButton:
 Gui, Main:+OwnDialogs
-GuiControlGet, ThGame, Main:, ThGame
-GuiControl, Main:Choose, ThGameName, %ThGame%
 Gui, Main:Submit, NoHide
+GuiControlGet, ThGameName, Main:, ThGame, Text
+GuiControlGet, ThcrapLang, Main:, ThcrapLang, Text
+If MultiGame = 0
+    Loop, %GameNumber%
+        {
+        If ThGame%A_Index%Do = 1
+            {
+            ThGame%A_Index% := A_Index
+            MultiGame++
+            }
+        }
+MultiGameOk:
+If MultiGame >= 1
+    {
+    Loop, %GameNumber%
+        {
+        If ThGame%A_Index% = %A_Index%
+            {
+            ThGame := A_Index
+            ThGame%A_Index% =
+            Break
+            }
+        }
+    ThGameName := GameName%ThGame%
+    }
 GameFolder := Game%ThGame%
 ThExe := GameExe%ThGame%
 ThcrapGameFolder := GameFolder "\thcrap"
@@ -537,12 +615,29 @@ Loop, %MultiDo%
     }
 FileDelete, %The%
 
+If MultiGame >= 1
+    {
+    MultiGame--
+    If MultiGame > 0
+        Goto, MultiGameOk
+    }
+
+If MultiGame = 0
+    Loop, %GameNumber%
+        {
+        If ThGame%A_Index%Do = 1
+            {
+            ThGame%A_Index% := A_Index
+            MultiGame++
+            }
+        }
+
 If DisableUpdates = 1
-    MsgUpdates = `n`nIf you want to enable updates just copy`n"thcrap_update.dll" from the Thcrap folder to:`n"%ThcrapGameFolder%"
+    MsgUpdates = `n`nIf you want to enable updates just copy`n"thcrap_update.dll" to the thcrap folder inside the game folder.
 Else
     MsgUpdates =
 
-If MultiDo > 1
+If (MultiDo > 1 || MultiGame > 1)
     MsgBox,, %ProgName%, All done :)`n`nEverything copied and exe's created.%MsgUpdates%
 Else
     MsgBox,, %ProgName%, All done :)`n`nEverything copied and "%Th%%ThSuffix1%.exe"%CustomCreated%created.%MsgUpdates%
