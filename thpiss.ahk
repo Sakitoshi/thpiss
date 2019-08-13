@@ -11,7 +11,7 @@ ListLines, Off
 #Include copyprogress.ahk
 #Include folderpicker.ahk
 
-ver = v2.3
+ver = v2.3.1
 ProgName = Touhou Patcher Installer Static Simulator
 Title = %ProgName% %ver%
 
@@ -202,6 +202,7 @@ Loop, %LangNum%
 If MultiDo < 2
     {
     MsgBox,, %ProgName%, You have to select at least 2 configs.
+    MultiDo = 0
     Return
     }
 GuiControl, Main:Disable, ExeName1
@@ -224,7 +225,7 @@ Loop, %GameNumber%
     Gui, Multi:Add, Checkbox, w200 vThGame%A_Index%Do, % GameName%A_Index%
 Gui, Multi:Add, Button, gGameOk, Ok
 Gui, Multi:+ToolWindow
-Gui, Multi:Show,, Select configs
+Gui, Multi:Show,, Select games
 Gui, Main:+Disabled
 Return
 
@@ -241,6 +242,7 @@ Loop, %GameNumber%
 If MultiGame < 2
     {
     MsgBox,, %ProgName%, You have to select at least 2 games.
+    MultiGame = 0
     Return
     }
 Gui, Main:-Disabled
